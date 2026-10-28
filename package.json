@@ -1,0 +1,23 @@
+{
+  "name": "urja-ops-api",
+  "version": "1.0.0",
+  "description": "RESTful API service and proxy for Urja Meter Operations",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "urja",
+    "meter-ops",
+    "fastify",
+    "energy",
+    "api"
+  ],
+  "dependencies": {
+    "@fastify/swagger": "^9.9.2",
+    "@fastify/swagger-ui": "^6.1.2",
+    "dotenv": "^18.0.9",
+    "fastify": "^5.12.7"
+  }
+}
