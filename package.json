@@ -1,20 +1,29 @@
 {
   "name": "urja-ops-api",
   "version": "1.0.0",
-  "description": "RESTful API service and proxy for Urja Meter Operations",
+  "description": "Production RESTful API service wrapping the Urja Meter Operations portal",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test.js"
+    "test": "node --test tests/normalizer.test.js tests/health.test.js tests/meters.test.js tests/consumption.test.js tests/network.test.js tests/errors.test.js",
+    "test:unit": "node --test tests/normalizer.test.js tests/health.test.js tests/meters.test.js tests/consumption.test.js tests/network.test.js tests/errors.test.js",
+    "test:integration": "node --test tests/integration.test.js",
+    "test:all": "node --test tests/normalizer.test.js tests/health.test.js tests/meters.test.js tests/consumption.test.js tests/network.test.js tests/errors.test.js tests/integration.test.js",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build"
   },
   "keywords": [
     "urja",
     "meter-ops",
     "fastify",
     "energy",
+    "smart-meters",
     "api"
   ],
+  "author": "Urja Ops Engineering",
+  "license": "ISC",
   "dependencies": {
+    "@fastify/cors": "^11.3.1",
     "@fastify/swagger": "^9.9.2",
     "@fastify/swagger-ui": "^6.1.2",
     "dotenv": "^18.0.9",
