@@ -75,7 +75,7 @@ To build an API over the legacy Urja Meter Operations portal (`https://urja-ops.
 
 ## 3. Authentication & Session Protocol
 
-### 2.1 The Login Mechanism
+### 3.1 The Login Mechanism
 - **Path**: `POST /login`
 - **Content-Type**: `application/x-www-form-urlencoded`
 - **Required Headers**:
@@ -99,7 +99,7 @@ To build an API over the legacy Urja Meter Operations portal (`https://urja-ops.
     Set-Cookie: __Secure-better-auth.session_token=...; Max-Age=3600; Path=/; HttpOnly; Secure; SameSite=Lax
     ```
 
-### 2.2 Session Duration & Lifecycle
+### 3.2 Session Duration & Lifecycle
 - **Cookie Lifetime**: The `Set-Cookie` header specifies `Max-Age=3600` (1 hour). Unused/idle session timeout was not measured beyond this header value.
 - **Unauthenticated / Expired Requests to `/portal/*`**:
   - Requesting `/portal/dts` without a session cookie returns `HTTP/1.1 401 Unauthorized` with:
@@ -113,7 +113,7 @@ To build an API over the legacy Urja Meter Operations portal (`https://urja-ops.
 
 ## 4. Discovered & Empirically Verified Upstream Endpoints
 
-### 3.1 Distribution Transformers: `GET /portal/dts`
+### 4.1 Distribution Transformers: `GET /portal/dts`
 - **Query Parameters**:
   - `page`: Integer (1-based index)
 - **Observed Response**:
@@ -138,7 +138,7 @@ To build an API over the legacy Urja Meter Operations portal (`https://urja-ops.
 
 ---
 
-### 3.2 Meter Search & Pagination: `GET /portal/meters/search`
+### 4.2 Meter Search & Pagination: `GET /portal/meters/search`
 - **Query Parameters**:
   - `q`: String (search term filter matching meter ID, serial number, make, or DT code)
   - `page`: Integer (1-based index)
@@ -166,7 +166,7 @@ To build an API over the legacy Urja Meter Operations portal (`https://urja-ops.
 
 ---
 
-### 3.3 Meter Geolocation: `GET /portal/meters/:meterId/geo`
+### 4.3 Meter Geolocation: `GET /portal/meters/:meterId/geo`
 - **Path Parameter**: `:meterId` (e.g. `J100000`)
 - **Observed Response**:
   - **Status Code**: `200 OK`
@@ -185,7 +185,7 @@ To build an API over the legacy Urja Meter Operations portal (`https://urja-ops.
 
 ---
 
-### 3.4 Meter Energy Telemetry: `GET /portal/meters/:meterId/energy`
+### 4.4 Meter Energy Telemetry: `GET /portal/meters/:meterId/energy`
 - **Path Parameter**: `:meterId` (e.g. `J100000`)
 - **Observed Response**:
   - **Status Code**: `200 OK`
@@ -217,19 +217,19 @@ To build an API over the legacy Urja Meter Operations portal (`https://urja-ops.
 
 ---
 
-### 3.5 Dynamic Signing Secret: `GET /portal/keys`
+### 4.5 Dynamic Signing Secret: `GET /portal/keys`
 - **Required Header**: Valid session cookie
 - **Observed Response**:
   - **Status Code**: `HTTP/1.1 200 OK`
   - **Payload**:
     ```json
-    {"data":{"signingSecret":"I3dZPPf5CgTp7JyGNMI8i6z8LFR7TmSR"}}
+    {"data":{"signingSecret":"I3dZPPf5..."}}
     ```
 - **Findings**: The secret is retrieved dynamically over HTTP. The response does not return an `expiresIn` field in the JSON payload, so the client caches it in memory for 10 minutes.
 
 ---
 
-### 3.6 HMAC-Authenticated Export: `GET /portal/export`
+### 4.6 HMAC-Authenticated Export: `GET /portal/export`
 - **Query Parameter**: `page=1` (required for signature canonical string, but ignored in data slicing)
 - **Required Headers**:
   - `x-timestamp`: Unix timestamp in seconds (integer string).
