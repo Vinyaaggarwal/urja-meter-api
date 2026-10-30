@@ -54,10 +54,14 @@ describe('Meter Consumption History Endpoints', () => {
     const body = JSON.parse(res.body);
     assert.ok(Array.isArray(body.data));
     assert.strictEqual(body.data.length, 2);
-    assert.strictEqual(body.data[0].timestamp, '2026-06-23T23:30:00.000Z');
+    // 23:30 IST -> 18:00 UTC
+    assert.strictEqual(body.data[0].timestamp, '2026-06-23T18:00:00.000Z');
     assert.strictEqual(body.data[0].activeEnergyKwh, 48438.74);
+    assert.strictEqual(body.data[0].intervalKwh, null);
     assert.strictEqual(body.data[0].apparentEnergyKvah, 52313.84);
     assert.strictEqual(body.data[0].voltageR, 226);
+    // Second interval computes delta (48439.16 - 48438.74 = 0.42 kWh)
+    assert.strictEqual(body.data[1].intervalKwh, 0.42);
     assert.strictEqual(body.meta.meterId, 'J100000');
     assert.strictEqual(body.meta.count, 2);
     assert.strictEqual(body.meta.unit, 'kWh');

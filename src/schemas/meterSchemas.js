@@ -127,7 +127,7 @@ const meterDetailSchema = {
 const meterConsumptionSchema = {
   tags: ['Meters'],
   summary: 'Retrieve meter consumption history',
-  description: 'Retrieves historical interval telemetry energy readings (kWh, kVAh, voltage)',
+  description: 'Retrieves historical interval telemetry energy readings (kWh, kVAh, voltage) with calculated interval usage',
   params: {
     type: 'object',
     required: ['meterId'],
@@ -147,6 +147,7 @@ const meterConsumptionSchema = {
               timestamp: { type: 'string' },
               rawTimestamp: { type: 'string' },
               activeEnergyKwh: { type: 'number' },
+              intervalKwh: { type: 'number', nullable: true },
               apparentEnergyKvah: { type: 'number' },
               voltageR: { type: 'number' },
             },
@@ -235,7 +236,9 @@ const transformersSchema = {
           type: 'object',
           properties: {
             page: { type: 'integer' },
-            count: { type: 'integer' },
+            pageSize: { type: 'integer' },
+            total: { type: 'integer' },
+            totalPages: { type: 'integer' },
           },
         },
       },
@@ -247,7 +250,7 @@ const transformersSchema = {
 const exportSchema = {
   tags: ['Export'],
   summary: 'Get signed export data',
-  description: 'Retrieves HMAC-SHA256 authenticated export containing meters, hierarchy, and coordinates',
+  description: 'Retrieves HMAC-SHA256 authenticated export containing normalized meters, hierarchy, and coordinates',
   querystring: {
     type: 'object',
     properties: {
@@ -258,13 +261,36 @@ const exportSchema = {
     200: {
       type: 'object',
       properties: {
-        data: { type: 'array' },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              meterId: { type: 'string' },
+              serialNumber: { type: 'string' },
+              manufacturer: { type: 'string' },
+              phaseType: { type: 'string' },
+              installationStatus: { type: 'string' },
+              distributionTransformerCode: { type: 'string' },
+              hierarchy: { type: 'object', additionalProperties: true },
+              geo: {
+                type: 'object',
+                nullable: true,
+                properties: {
+                  latitude: { type: 'number' },
+                  longitude: { type: 'number' },
+                },
+              },
+            },
+          },
+        },
         meta: {
           type: 'object',
           properties: {
             page: { type: 'integer' },
-            count: { type: 'integer' },
-            authenticated: { type: 'boolean' },
+            pageSize: { type: 'integer' },
+            total: { type: 'integer' },
+            totalPages: { type: 'integer' },
             signatureMethod: { type: 'string' },
           },
         },

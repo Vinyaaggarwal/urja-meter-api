@@ -3,8 +3,9 @@
  */
 
 /**
- * Parses DD/MM/YYYY HH:mm string to ISO 8601 string
- * Example: '23/06/2026 23:30' -> '2026-06-23T23:30:00.000Z'
+ * Parses DD/MM/YYYY HH:mm string (assumed to be Indian Standard Time, UTC+5:30)
+ * to an ISO 8601 UTC string.
+ * Example: '23/06/2026 23:30' IST -> '2026-06-23T18:00:00.000Z' UTC
  * @param {string} dateStr
  * @returns {string|null}
  */
@@ -21,8 +22,10 @@ function parseIndianDateToIso(dateStr) {
     return null;
   }
 
-  // Create date (months are 0-indexed in JS Date)
-  const dt = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+  // Portal timestamps (DD/MM/YYYY HH:mm) are in Indian Standard Time (IST, UTC+5:30).
+  // Convert IST to UTC by subtracting 5 hours and 30 minutes (19,800,000 ms).
+  const utcMillis = Date.UTC(year, month - 1, day, hours, minutes) - (5 * 60 + 30) * 60 * 1000;
+  const dt = new Date(utcMillis);
   return isNaN(dt.getTime()) ? null : dt.toISOString();
 }
 
@@ -68,13 +71,47 @@ function normalizeReading(item) {
 }
 
 /**
- * Normalizes an array of energy / consumption readings
+ * Normalizes an array of energy / consumption readings.
+ * Computes intervalKwh (delta from preceding reading) if readings are cumulative registers.
+ * Rules:
+ *  - First reading: intervalKwh = null (no baseline).
+ *  - Gap > 30 min between consecutive timestamps: intervalKwh = null (misleading span).
+ *  - Register decrease (reset/rollover): intervalKwh = null.
+ *  - Otherwise: intervalKwh = curr - prev (rounded to 2 decimal places).
  * @param {Array} readings
  * @returns {Array}
  */
 function normalizeConsumptionList(readings) {
   if (!Array.isArray(readings)) return [];
-  return readings.map(normalizeReading).filter(Boolean);
+  const normalized = readings.map(normalizeReading).filter(Boolean);
+
+  for (let i = 0; i < normalized.length; i++) {
+    if (i === 0) {
+      normalized[i].intervalKwh = null; // Baseline — no preceding reading
+    } else {
+      const prev = normalized[i - 1].activeEnergyKwh;
+      const curr = normalized[i].activeEnergyKwh;
+
+      // Gap detection: if the gap between consecutive timestamps exceeds 30 minutes
+      // (1 800 000 ms), the delta would cover a longer-than-expected window.
+      const prevTs = normalized[i - 1].timestamp ? new Date(normalized[i - 1].timestamp).getTime() : NaN;
+      const currTs = normalized[i].timestamp ? new Date(normalized[i].timestamp).getTime() : NaN;
+      const gapMs = currTs - prevTs;
+      const hasGap = isNaN(gapMs) || gapMs > 30 * 60 * 1000;
+
+      if (hasGap) {
+        // Timestamps more than 30 min apart — delta would be misleading
+        normalized[i].intervalKwh = null;
+      } else if (typeof prev === 'number' && typeof curr === 'number' && curr >= prev) {
+        normalized[i].intervalKwh = parseFloat((curr - prev).toFixed(2));
+      } else {
+        // Register decreased (reset or rollover)
+        normalized[i].intervalKwh = null;
+      }
+    }
+  }
+
+  return normalized;
 }
 
 /**
@@ -86,13 +123,34 @@ function normalizeMeter(meter) {
   if (!meter) return null;
   return {
     meterId: meter.meterId || null,
-    serialNumber: meter.serialNo || null,
-    manufacturer: meter.make || null,
+    serialNumber: meter.serialNo || meter.serialNumber || null,
+    manufacturer: meter.make || meter.manufacturer || null,
     phaseType: meter.phaseType || null,
-    installationStatus: meter.installStatus || null,
-    distributionTransformerCode: meter.dtCode || null,
-    installationType: meter.installType || undefined,
+    installationStatus: meter.installStatus || meter.installationStatus || null,
+    distributionTransformerCode: meter.dtCode || meter.distributionTransformerCode || null,
+    installationType: meter.installType || meter.installationType || undefined,
     build: meter.build || undefined,
+  };
+}
+
+/**
+ * Normalizes an export record, converting raw portal field names to standard API naming
+ * @param {Object} record
+ * @returns {Object}
+ */
+function normalizeExportRecord(record) {
+  if (!record) return null;
+  return {
+    meterId: record.meterId || null,
+    serialNumber: record.serialNo || record.serialNumber || null,
+    manufacturer: record.make || record.manufacturer || null,
+    phaseType: record.phaseType || null,
+    installationStatus: record.installStatus || record.installationStatus || null,
+    installationType: record.installType || record.installationType || undefined,
+    build: record.build || undefined,
+    distributionTransformerCode: record.dtCode || record.distributionTransformerCode || null,
+    hierarchy: record.hierarchy || null,
+    geo: normalizeGeo(record.geo),
   };
 }
 
@@ -102,5 +160,6 @@ module.exports = {
   normalizeReading,
   normalizeConsumptionList,
   normalizeMeter,
+  normalizeExportRecord,
 };
 

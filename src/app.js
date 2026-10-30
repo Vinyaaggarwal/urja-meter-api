@@ -29,7 +29,7 @@ async function buildApp(opts = {}) {
       info: {
         title: 'Urja Meter Operations API',
         description:
-          'Production-minded RESTful API service wrapping the Urja Meter Operations portal. Provides authenticated proxy endpoints for Distribution Transformers, Smart Meters, Geospatial positions, Interval Consumption telemetry, Network Hierarchy, and HMAC-signed Data Exports.',
+          'RESTful API service wrapping the Urja Meter Operations portal. Provides authenticated proxy endpoints for Distribution Transformers, Smart Meters, Geospatial positions, Interval Consumption telemetry, Network Hierarchy, and HMAC-signed Data Exports.',
         version: '1.0.0',
       },
       servers: [

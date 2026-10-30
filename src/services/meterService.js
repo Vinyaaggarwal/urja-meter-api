@@ -4,6 +4,7 @@ const {
   normalizeGeo,
   normalizeConsumptionList,
   normalizeReading,
+  normalizeExportRecord,
 } = require('../utils/normalizer');
 
 /**
@@ -136,20 +137,35 @@ class MeterService {
   // 5. List distribution transformers
   async getTransformers({ page = 1 } = {}) {
     const raw = await this.client.getTransformers({ page });
-    const list = raw?.data || raw || [];
+    const list = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
+    const total = raw.total ?? list.length;
+    const pageSize = raw.pageSize || 20;
     return {
       data: list,
-      meta: { page: Number(page) || 1, count: list.length },
+      meta: {
+        page: Number(page) || 1,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize) || 1,
+      },
     };
   }
 
   // 6. Get signed export data
   async getExport({ page = 1 } = {}) {
     const raw = await this.client.getExport({ page });
-    const list = raw?.data || raw || [];
+    const list = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
+    const total = raw.total ?? 403;
+    const pageSize = raw.pageSize || list.length;
     return {
-      data: list,
-      meta: { page: Number(page) || 1, count: list.length, signatureMethod: 'HMAC-SHA256' },
+      data: list.map(normalizeExportRecord),
+      meta: {
+        page: Number(page) || 1,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize) || 1,
+        signatureMethod: 'HMAC-SHA256',
+      },
     };
   }
 }
