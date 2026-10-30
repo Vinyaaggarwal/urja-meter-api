@@ -25,7 +25,8 @@ class PortalClient {
     this.password =
       options.password ||
       process.env.PORTAL_PASSWORD ||
-      process.env.URJA_PASSWORD;
+      process.env.URJA_PASSWORD ||
+      null; // validated in login() to avoid crashing during unit-test module load
 
     this.timeoutMs = options.timeoutMs || parseInt(process.env.PORTAL_TIMEOUT_MS || '10000', 10);
     this.cookies = new Map();
@@ -68,6 +69,9 @@ class PortalClient {
    * @returns {Promise<boolean>}
    */
   async login() {
+    if (!this.password) {
+      throw new Error('PORTAL_PASSWORD is not set. Add it to your .env file.');
+    }
     const loginUrl = `${this.baseUrl}/login`;
     const formBody = new URLSearchParams({
       email: this.email,
