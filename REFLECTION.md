@@ -43,3 +43,35 @@ This document answers the five required reflective engineering questions regardi
 2. **No concurrency lock on session renewal**: `portalClient.js` lacks a mutex on `login()`. If the session expires while multiple concurrent requests are in flight, they will all fire separate `POST /login` requests at the same time.
 3. **Unfiltered consumption payload**: The consumption endpoint returns all 337 readings in a single payload without pagination or date filtering, which is inefficient for downstream clients interested only in recent readings.
 4. **Mocked unit tests cannot detect upstream API drift**: The unit test suite relies on mocked upstream responses. If the legacy portal modifies its payload structures, session cookies, or HMAC signing requirements, the unit tests will continue to pass until the live integration test suite is explicitly run.
+
+---
+
+## Engineering Decisions and Trade-offs
+
+During implementation, I made several decisions to keep the service modular, secure and practical within the assignment scope:
+
+1. **Fastify-based architecture**: Used a modular structure to separate routing, request handling, business logic and portal communication.
+2. **Read-only integration**: Kept the service focused on retrieving and exposing existing portal data rather than modifying upstream records.
+3. **Centralized portal client**: Isolated authentication and upstream HTTP communication to avoid duplicating integration logic.
+4. **Data normalization**: Added a normalization layer to provide consistent response structures to API consumers.
+5. **HMAC-based export authentication**: Implemented request signing using the observed portal signing mechanism.
+6. **Scope management**: Prioritized the required meter, transformer and export functionality. Features outside the core scope were treated as optional enhancements or future work.
+
+---
+
+## Additional Features: Rationale
+
+The health check, validation, error handling, automated tests and optional frontend were added to improve service usability and maintainability.
+
+These additions were intended to demonstrate how the API could be consumed and operated in a practical environment, rather than simply satisfying the minimum endpoint requirements.
+
+---
+
+## Limitations and Future Improvements
+
+- Add retry and backoff strategies for transient upstream failures.
+- Improve session refresh and concurrent authentication handling.
+- Add pagination support wherever the upstream API supports it.
+- Expand integration testing against actual portal responses.
+- Improve monitoring and structured logging.
+- Add further API documentation and usage examples.

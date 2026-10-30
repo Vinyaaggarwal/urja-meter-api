@@ -7,6 +7,7 @@
 ## 📑 Table of Contents
 
 - [Overview](#-overview)
+- [Assignment Requirements and Implementation](#-assignment-requirements-and-implementation)
 - [Key Features](#-key-features)
 - [Architecture & Data Flow](#-architecture--data-flow)
 - [Project Structure](#-project-structure)
@@ -38,6 +39,40 @@
 The **Urja Meter Operations** portal is an internal utility operations dashboard used for monitoring smart electricity meters, distribution network hierarchy, and 30-minute interval consumption telemetry. The portal does not have a documented public API.
 
 This project delivers a REST API that interfaces with the portal to retrieve, normalize, and expose structured JSON data suitable for downstream applications, dashboards, and analytics pipelines.
+
+---
+
+## 📋 Assignment Requirements and Implementation
+
+The assignment was to build a clean, documented API service over the existing Urja Meter Ops portal, using read-only access.
+
+| Assignment requirement | What was implemented |
+| --- | --- |
+| Build an API service over the existing portal | Implemented a Fastify-based backend service |
+| Integrate with the existing portal | Implemented portal authentication and an HTTP client for upstream requests |
+| Expose meter-related information | Added endpoints for meter listing, meter details, consumption and network information |
+| Expose transformer information | Added a transformer listing endpoint |
+| Handle secure export functionality | Implemented timestamp-based HMAC-SHA256 request signing |
+| Document API behavior | Added API documentation and OpenAPI 3.x specification |
+| Document portal behavior | Added PROTOCOL.md with observed authentication, response formats, pagination and signing behavior |
+| Explain technical decisions | Added REFLECTION.md covering assumptions, trade-offs and limitations |
+| Provide maintainable code | Organized the implementation into routes, controllers, services, schemas and utility modules |
+
+### Additional Work and Why It Was Done
+
+The following additions were included to improve usability, maintainability and demonstration quality beyond the core API requirements.
+
+| Additional work | Why it was included |
+| --- | --- |
+| Health-check endpoint | Makes it easy to verify whether the backend service is running |
+| Input validation and schemas | Prevents invalid requests from reaching the service layer |
+| Centralized error handling | Provides consistent API error responses |
+| Data normalization | Makes upstream portal data easier for API consumers to work with |
+| HMAC signing utility | Keeps security-related signing logic separate and reusable |
+| Automated tests | Helps verify application behavior and catch regressions |
+| Frontend dashboard and API Explorer | Provides a visual way to explore the API and demonstrate the service (located in `frontend/`) |
+
+The additional work was intended to improve the developer experience and make the service easier to test, understand and extend. It was not required to reproduce the entire existing portal.
 
 ---
 

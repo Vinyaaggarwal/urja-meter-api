@@ -4,7 +4,55 @@ This document records the empirical investigation, network findings, authenticat
 
 ---
 
-## 1. Investigation Methodology: How I Investigated
+## 1. Portal Investigation: What I Investigated and Discovered
+
+To build an API over the legacy Urja Meter Operations portal (`https://urja-ops.flockenergy.tech`), I conducted an empirical reverse-engineering investigation across its frontend code, network requests, session lifecycle, and cryptographic safeguards.
+
+### Summary of Key Discoveries:
+1. **How Authentication Works**:
+   - The portal runs SvelteKit with `better-auth`.
+   - Login uses `POST /login` with `x-sveltekit-action: true` and credentials submitted as `application/x-www-form-urlencoded`.
+   - On success, the portal responds with HTTP 200, a redirect body `{"type":"redirect","status":303,"location":"/meters"}`, and sets a session cookie `__Secure-better-auth.session_token` with `Max-Age=3600; Path=/; HttpOnly; Secure; SameSite=Lax`.
+   - API endpoints (`/portal/*`) accessed without a valid cookie return HTTP 401 `{"error":"unauthorized","message":"A valid session is required."}`.
+
+2. **Which Upstream Endpoints Were Inspected**:
+   - `POST /login` — SvelteKit form action for session creation.
+   - `GET /portal/meters/search?q=&page=1` — Meter directory listing with substring search.
+   - `GET /portal/meters/:id/geo` — Meter geolocation coordinates.
+   - `GET /portal/meters/:id/energy` — 30-minute interval telemetry records.
+   - `GET /portal/dts?page=1` — Distribution transformer inventory.
+   - `GET /portal/keys` — Dynamic HMAC signing key provider.
+   - `GET /portal/export?page=1` — HMAC-signed full meter inventory export.
+
+3. **What Response Formats Were Observed**:
+   - Pure JSON payloads across all `/portal/*` endpoints.
+   - **Coordinate string encoding**: `/portal/meters/:id/geo` returns coordinates as high-precision string literals (`"26.938961002479868"`), whereas `/portal/export` returns 6-decimal numbers (`26.938961`).
+   - **Date formats**: Telemetry timestamps use Indian format `DD/MM/YYYY HH:mm` without timezone designations.
+   - **Energy fields**: `kwh`, `kvah`, and `voltR` are returned as strings, requiring numeric parsing.
+   - **Register behavior**: Telemetry `kwh` values represent a cumulative meter register index rather than discrete interval usage.
+
+4. **How Pagination Behaves**:
+   - `/portal/meters/search`: Fully paginated (20 items/page, 403 total meters across 21 pages).
+   - `/portal/dts`: Paginated (20 items/page, 40 total transformers across 2 pages).
+   - `/portal/export`: **Ignores pagination entirely**. Querying `page=1`, `page=2`, or `page=999` returns the identical complete payload of 403 meters (`total: 403`).
+   - `/portal/meters/:id/energy`: Unpaginated; returns all interval readings (e.g. 337 readings for J100000, 8 readings for J100050).
+
+5. **How the Export Signature is Generated and Validated**:
+   - Identified in frontend bundle `/_app/immutable/nodes/4.2Bgc2kUI.js`.
+   - A secret key is fetched via `GET /portal/keys` (`data.signingSecret`).
+   - A canonical request string is constructed: `METHOD\nPATH\nQUERY_STRING\nTIMESTAMP` (e.g., `GET\n/portal/export\npage=1\n<timestamp>`).
+   - The signature is calculated as `HMAC-SHA256(canonicalString, secret)` in lowercase hexadecimal and passed in `x-signature` along with `x-timestamp`.
+   - The upstream portal enforces an empirical clock-skew window of $\pm$300 seconds (5 minutes). Tampered or expired signatures return HTTP 401 `{"error":"signature_invalid",...}`.
+
+6. **Which Behaviors Remain Assumptions Rather Than Confirmed Facts**:
+   - **Timezone**: Assumed Indian Standard Time (IST, UTC+5:30) because the utility is in Rajasthan; the portal does not state timezone explicitly.
+   - **Idle Session Timeout**: `Max-Age=3600` is declared on the cookie, but whether the server terminates inactive sessions prior to 1 hour was not measured.
+   - **Rate Limits**: No rate limit headers or 429 status codes were observed, but threshold limits under heavy load were not tested to avoid disrupting the service.
+   - **Signing Secret Rotation Frequency**: The portal does not provide TTL or expiration for keys returned by `/portal/keys`.
+
+---
+
+## 2. Investigation Methodology: How I Investigated
 
 1. **Initial Network Inspection**:
    - I started by logging into `https://urja-ops.flockenergy.tech` through a desktop browser and monitoring DevTools (Network and Application tabs).
@@ -25,7 +73,7 @@ This document records the empirical investigation, network findings, authenticat
 
 ---
 
-## 2. Authentication & Session Protocol
+## 3. Authentication & Session Protocol
 
 ### 2.1 The Login Mechanism
 - **Path**: `POST /login`
@@ -63,7 +111,7 @@ This document records the empirical investigation, network findings, authenticat
 
 ---
 
-## 3. Discovered & Empirically Verified Upstream Endpoints
+## 4. Discovered & Empirically Verified Upstream Endpoints
 
 ### 3.1 Distribution Transformers: `GET /portal/dts`
 - **Query Parameters**:
@@ -215,7 +263,7 @@ This document records the empirical investigation, network findings, authenticat
 
 ---
 
-## 4. Security Findings & Architectural Flaws
+## 5. Security Findings & Architectural Flaws
 
 1. **Client-Side Secret Exposure**:
    - The signing secret required for `/portal/export` is fetched dynamically via `GET /portal/keys` by any authenticated session.
@@ -226,7 +274,7 @@ This document records the empirical investigation, network findings, authenticat
 
 ---
 
-## 5. Empirical Data Quirks & Edge Cases
+## 6. Empirical Data Quirks & Edge Cases
 
 1. **Distribution Transformer Mappings**:
    - 40 unique DT codes exist across the 403 meters (`DT-001` to `DT-040`).
@@ -241,7 +289,7 @@ This document records the empirical investigation, network findings, authenticat
 
 ---
 
-## 6. Empirical Verification Summary
+## 7. Empirical Verification Summary
 
 ### Confirmed Observations
 
