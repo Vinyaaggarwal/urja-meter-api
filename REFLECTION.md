@@ -35,6 +35,7 @@ This document answers the five required reflective engineering questions regardi
 - **How I found out**: When reviewing sample records like `48438.74` followed by `48439.16`, I realized the numbers only increased and were far too large to represent single half-hour periods. They were cumulative meter register readings (meter indices), and the actual interval consumption was the difference between consecutive readings (about `0.42 kWh`).
 - **What I did**: I updated the normalizer to compute `intervalKwh` as the delta between successive intervals while retaining `activeEnergyKwh` as the cumulative register value, and documented the distinction in both the code and `PROTOCOL.md`.
 
+
 ---
 
 ### 5. If reviewing your own submission, what would you criticize?
